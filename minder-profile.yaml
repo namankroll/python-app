@@ -8,40 +8,64 @@ alert: "on"
 remediate: "on"
 repository:
   - name: main-protection
-    type: branch_protection_enabled
+    type: stacklok/branch_protection_enabled
     params:
       branch: main
     def: {}
   - name: main-disallow-force-push
-    type: branch_protection_allow_force_pushes
+    type: stacklok/branch_protection_allow_force_pushes
     params:
       branch: main
     def:
       allow_force_pushes: false
   - name: main-enforce-admins
-    type: branch_protection_enforce_admins
+    type: stacklok/branch_protection_enforce_admins
     params:
       branch: main
     def:
       enforce_admins: true
   - name: main-enforce-review
-    type: branch_protection_require_pull_request_approving_review_count
+    type: stacklok/branch_protection_require_pull_request_approving_review_count
     params:
       branch: main
     def:
       required_approving_review_count: 1
-  - type: dependabot_configured
+  - type: stacklok/dependabot_configured
+    name: python-dependabot
     def:
       package_ecosystem: pip
       schedule_interval: weekly
       apply_if_file: requirements.txt
+  - type: stacklok/dependabot_configured
+    name: ghaction-dependabot
+    def:
+      package_ecosystem: github-actions
+      schedule_interval: weekly
+  - type: stacklok/dependabot_configured
+    name: go-dependabot
+    def:
+      package_ecosystem: gomod
+      schedule_interval: daily
+      apply_if_file: go.mod
+  - type: stacklok/dependabot_configured
+    name: node-dependabot
+    def:
+      package_ecosystem: npm
+      schedule_interval: weekly
+      only_if_file: package-lock.json
+  - type: stacklok/dependabot_configured
+    name: docker-dependabot
+    def:
+      package_ecosystem: docker
+      schedule_interval: weekly
+      only_if_file: Dockerfile
   - name: pin-actions
-    type: actions_check_pinned_tags
+    type: stacklok/actions_check_pinned_tags
     def:
       exclude:
         - actions/checkout@v3
 artifact:
-  - type: artifact_signature
+  - type: stacklok/artifact_signature
     params:
       tags: [main]
       name: bad-python
@@ -49,7 +73,7 @@ artifact:
       is_signed: true
       is_verified: true
 pull_request:
-  - type: pr_vulnerability_check
+  - type: stacklok/pr_vulnerability_check
     def:
       action: review
       ecosystem_config:
@@ -58,7 +82,19 @@ pull_request:
           vulnerability_database_endpoint: https://api.osv.dev/v1/query
           package_repository:
             url: https://pypi.org/pypi
-  - type: pr_trusty_check
+        - name: npm
+          vulnerability_database_type: osv
+          vulnerability_database_endpoint: https://api.osv.dev/v1/query
+          package_repository:
+            url: https://registry.npmjs.org
+        - name: go
+          vulnerability_database_type: osv
+          vulnerability_database_endpoint: https://api.osv.dev/v1/query
+          package_repository:
+            url: https://proxy.golang.org
+          sum_repository:
+            url: https://sum.golang.org
+  - type: stacklok/pr_trusty_check
     def:
       action: summary
       ecosystem_config:
